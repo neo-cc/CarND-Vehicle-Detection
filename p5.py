@@ -164,7 +164,7 @@ def slide_window(img, x_start_stop=[None, None], y_start_stop=[None, None],
     return window_list
 
 # Define a function to draw bounding boxes
-def draw_boxes(img, bboxes, color=(0, 0, 255), thick=6):
+def draw_boxes(img, bboxes, color=(0, 255, 0), thick=6):
     # Make a copy of the image
     imcopy = np.copy(img)
     # Iterate through the bounding boxes
@@ -449,22 +449,91 @@ def apply_threshold(heatmap, threshold):
     # Return thresholded map
     return heatmap
 
-def draw_labeled_bboxes(img, labels):
-    # Iterate through all detected cars
-    for car_number in range(1, labels[1]+1):
-        # Find pixels with each car_number label value
-        nonzero = (labels[0] == car_number).nonzero()
-        # Identify x and y values of those pixels
-        nonzeroy = np.array(nonzero[0])
-        nonzerox = np.array(nonzero[1])
-        # Define a bounding box based on min/max x and y
-        if((np.max(nonzerox)-np.min(nonzerox))>=64 and (np.max(nonzeroy)-np.min(nonzeroy))>64):
-            bbox = ((np.min(nonzerox), np.min(nonzeroy)), (np.max(nonzerox), np.max(nonzeroy)))
-            # Draw the box on the image
-            cv2.rectangle(img, bbox[0], bbox[1], (0,255,0), 6)
-    # Return the image
-    return img
 
+
+class vehicles():
+    def __init__(self):
+        self.labels = None
+        self.numofcar = 0
+        # temp parameter to store one frame info
+        self.box_list = []
+        self.center = []
+        self.dimension = []     # length max_x - min_x, width max_y - min_y
+        
+        # parameter for n average frames
+        self.previous_numofcar = 0
+        self.avg_box_list = []
+        self.avg_center = []
+        self.avg_dimension = []
+    
+    
+    def get_box_list_center(self):
+        # Iterate through all detected cars
+        for car_number in range(1, self.numofcar + 1):
+            
+            # Find pixels with each car_number label value
+            nonzero = (self.labels[0] == car_number).nonzero()
+            # Identify x and y values of those pixels
+            nonzeroy = np.array(nonzero[0])
+            nonzerox = np.array(nonzero[1])
+            # Define a bounding box based on min/max x and y
+            self.dimension.append( (np.max(nonzerox)-np.min(nonzerox), np.max(nonzeroy)-np.min(nonzeroy)) )
+            self.center.append( ((np.min(nonzerox) + np.max(nonzerox))//2, (np.min(nonzeroy)+np.max(nonzeroy))//2) )
+            self.box_list.append( ((np.min(nonzerox), np.min(nonzeroy)), (np.max(nonzerox), np.max(nonzeroy))) )
+        
+        # sort all the car objects from left to right
+        if(self.numofcar >= 2):
+            self.center,self.box_list,self.dimension= (list(t) for t in zip(*sorted(zip(self.center,self.box_list,self.dimension))))
+            print(self.center)
+            print(self.box_list)
+            
+            # combine box nearby if more than 2 boxes
+            if(self.previous_numofcar>=1):
+                for(i in range(0,self.numofcar)):
+                    center_avg_x = self.center[i][0] + self.center[i+1][0])//2
+                    center_avg_y = self.center[i][1] + self.center[i+1][1])//2
+                    
+                    for(j in range(0,self.previous_numofcar+1):
+                        temp_x = self.avg_dimension[j][0]*0.1
+                        temp_y = self.avg_dimension[j][1]*0.1
+                        
+                        # combine when average_center_location < 0.1*dimension +/- previous_locationa
+                        if( self.avg_center[i][0]-temp_x<center_avg_x<self.avg_center[i][0]+temp_x
+                           and self.avg_center[i][1]-temp_y<center_avg_y<self.avg_center[i][1]+temp_y):
+                        # TODO: replace 2 boxes with new box in list
+                        
+                        
+                        
+                        # final append
+                        if((np.max(nonzerox)-np.min(nonzerox))>=64 and (np.max(nonzeroy)-np.min(nonzeroy))>64):
+                        
+                        
+                        
+                        
+    def update(self):
+        print(self.labels[1])
+        
+        self.numofcar = self.labels[1]
+        self.box_list = []
+        self.center = []
+        self.dimension = []
+        self.get_box_list_center()
+        
+        
+        # if find same amount of cars in next pciture
+        if(self.numofcar == self.labels[1]):
+        print('enter 1')
+        
+        # if find more cars in next pciture
+        elif (self.numofcar < self.labels[1]): 
+        print('enter 2')
+        
+        # if find less cars in next pciture
+        elif (self.numofcar > self.labels[1]):
+        print('enter 3')
+                        
+                        
+                        
 
 
 # Multi-Scale prediction and window size settings
@@ -485,7 +554,6 @@ def process_image(test_img):
     bbox_list_all = []
     for scale, ystart, ystop, xstart, xstop in zip(scales, ystarts, ystops, xstarts, xstops):
 
-#        print(scale, ystart, ystop, xstart, xstop)
         out_img, bbox_list = find_cars(test_img, ystart, ystop, xstart, xstop,
                                    scale, clf, X_scaler, orient, pix_per_cell, cell_per_block,
                                    spatial_size, hist_bins)
@@ -515,8 +583,11 @@ def process_image(test_img):
     heatmap = np.clip(heat, 0, 255)
     
     # Find final boxes from heatmap using label function
-    labels = label(heatmap)
-    draw_img = draw_labeled_bboxes(np.copy(test_img), labels)
+    car.labels = label(heatmap)
+    car.get_box_list_center()
+
+    draw_img = draw_boxes(test_img, car.box_list)
+               
 
 ##### for processing image debug output
 #    # Store Heatmap
@@ -524,12 +595,16 @@ def process_image(test_img):
 #    plt.imsave(write_name, heatmap)
 #    
 #    # Store Final Draw Box on Image
-#    write_name = 'output_images/final_draw/' + fname.split('/')[-1]
+#    write_name = 'output_images/final_draw_debug/' + fname.split('/')[-1]
 #    plt.imsave(write_name, draw_img)
 ##### end debug
 
     return draw_img
 
+
+
+
+car = vehicles()
 
 # Import everything needed to edit/save/watch video clips
 from moviepy.editor import VideoFileClip
