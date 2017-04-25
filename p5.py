@@ -454,21 +454,21 @@ def apply_threshold(heatmap, threshold):
 class vehicles():
     def __init__(self):
         self.labels = None
-        self.numofcar = 0
         # temp parameter to store one frame info
+        self.numofcar = 0
         self.box_list = []
         self.center = []
-        self.dimension = []     # length max_x - min_x, width max_y - min_y
-        
+
         # parameter for n average frames
         self.previous_numofcar = 0
         self.avg_box_list = []
         self.avg_center = []
-        self.avg_dimension = []
-    
+
+        self.temp_box_list = []
+        self.temp_center = []
     
     def get_box_list_center(self):
-        # Iterate through all detected cars
+        # Iterate through all detected cars in current frame
         for car_number in range(1, self.numofcar + 1):
             
             # Find pixels with each car_number label value
@@ -477,63 +477,91 @@ class vehicles():
             nonzeroy = np.array(nonzero[0])
             nonzerox = np.array(nonzero[1])
             # Define a bounding box based on min/max x and y
-            self.dimension.append( (np.max(nonzerox)-np.min(nonzerox), np.max(nonzeroy)-np.min(nonzeroy)) )
-            self.center.append( ((np.min(nonzerox) + np.max(nonzerox))//2, (np.min(nonzeroy)+np.max(nonzeroy))//2) )
-            self.box_list.append( ((np.min(nonzerox), np.min(nonzeroy)), (np.max(nonzerox), np.max(nonzeroy))) )
-        
+            if((np.max(nonzerox)-np.min(nonzerox))>=32 and (np.max(nonzeroy)-np.min(nonzeroy))>32): #64
+                self.center.append( ((np.min(nonzerox) + np.max(nonzerox))//2, (np.min(nonzeroy)+np.max(nonzeroy))//2) )
+                self.box_list.append( ((np.min(nonzerox), np.min(nonzeroy)), (np.max(nonzerox), np.max(nonzeroy))) )
+        self.numofcar = len(self.box_list)
+      
+    def combine_nearby_boxes(self):
         # sort all the car objects from left to right
         if(self.numofcar >= 2):
-            self.center,self.box_list,self.dimension= (list(t) for t in zip(*sorted(zip(self.center,self.box_list,self.dimension))))
+            self.center,self.box_list= (list(t) for t in zip(*sorted(zip(self.center,self.box_list))))
             print(self.center)
             print(self.box_list)
             
+            self.temp_center = self.center[:]
+            self.temp_box_list = self.box_list[:]
+            
             # combine box nearby if more than 2 boxes
-            if(self.previous_numofcar>=1):
-                for(i in range(0,self.numofcar)):
-                    center_avg_x = self.center[i][0] + self.center[i+1][0])//2
-                    center_avg_y = self.center[i][1] + self.center[i+1][1])//2
+            if(self.previous_numofcar>0):
+                for i in range(0,self.numofcar-1):
+                    center_avg_x = (self.center[i][0] + self.center[i+1][0])//2
+                    center_avg_y = (self.center[i][1] + self.center[i+1][1])//2
                     
-                    for(j in range(0,self.previous_numofcar+1):
-                        temp_x = self.avg_dimension[j][0]*0.1
-                        temp_y = self.avg_dimension[j][1]*0.1
+                    for j in range(0,self.previous_numofcar):
+                        temp_x = (self.avg_box_list[j][1][0]-self.avg_box_list[j][0][0])*0.2
+                        temp_y = (self.avg_box_list[j][1][1]-self.avg_box_list[j][0][1])*0.2
                         
                         # combine when average_center_location < 0.1*dimension +/- previous_locationa
                         if( self.avg_center[i][0]-temp_x<center_avg_x<self.avg_center[i][0]+temp_x
                            and self.avg_center[i][1]-temp_y<center_avg_y<self.avg_center[i][1]+temp_y):
-                        # TODO: replace 2 boxes with new box in list
+                        # Replace 2 boxes with new box in list
+                            self.temp_center.remove(self.center[i])
+                            self.temp_center.remove(self.center[i+1])
+                            self.temp_center.append((center_avg_x,center_avg_y))
                         
-                        
-                        
-                        # final append
-                        if((np.max(nonzerox)-np.min(nonzerox))>=64 and (np.max(nonzeroy)-np.min(nonzeroy))>64):
-                        
+                            new_box_x0 = np.min(self.box_list[i][0][0],self.box_list[i+1][0][0])
+                            new_box_x1 = np.max(self.box_list[i][1][0],self.box_list[i+1][1][0])
+                            new_box_y0 = np.min(self.box_list[i][0][1],self.box_list[i+1][0][1])
+                            new_box_y1 = np.max(self.box_list[i][1][1],self.box_list[i+1][1][1])
+                            
+                            self.temp_box_list.remove(self.box_list[i])
+                            self.temp_box_list.remove(self.box_list[i+1])
+                            self.temp_box_list.append(((new_box_x0,new_box_y0),(new_box_x1,new_box_y1)))
+                                    
+        # sort again for all the car objects from left to right
+        if(len(self.temp_box_list) >= 2):
+            self.temp_center,self.temp_box_list= (list(t) for t in
+                                                  zip(*sorted(zip(self.temp_center,self.temp_box_list))))
+            print(self.temp_center)
+            print(self.temp_box_list)
                         
                         
                         
     def update(self):
+        
         print(self.labels[1])
         
         self.numofcar = self.labels[1]
         self.box_list = []
         self.center = []
-        self.dimension = []
         self.get_box_list_center()
+                                                 
+        if(self.previous_numofcar == 0):
+            self.avg_box_list = self.box_list[:]
+            self.avg_center = self.center[:]
         
-        
+        self.combine_nearby_boxes()
+        self.numofcar = len(self.temp_box_list)
+        print('number of car after combine: ', self.numofcar)
+                                                 
         # if find same amount of cars in next pciture
-        if(self.numofcar == self.labels[1]):
-        print('enter 1')
+        if(self.numofcar == self.previous_numofcar):
+           print('enter 1')
         
         # if find more cars in next pciture
-        elif (self.numofcar < self.labels[1]): 
-        print('enter 2')
+        elif (self.numofcar < self.previous_numofcar):
+           print('enter 2')
         
         # if find less cars in next pciture
-        elif (self.numofcar > self.labels[1]):
-        print('enter 3')
-                        
-                        
-                        
+        elif (self.numofcar > self.previous_numofcar):
+           print('enter 3')
+    
+        # ToDo: Do average
+        self.avg_center = self.temp_center[:]
+        self.avg_box_list = self.temp_box_list[:]
+        self.previous_numofcar = len(self.avg_box_list)
+
 
 
 # Multi-Scale prediction and window size settings
@@ -584,9 +612,9 @@ def process_image(test_img):
     
     # Find final boxes from heatmap using label function
     car.labels = label(heatmap)
-    car.get_box_list_center()
+    car.update()
 
-    draw_img = draw_boxes(test_img, car.box_list)
+    draw_img = draw_boxes(test_img, car.avg_box_list)
                
 
 ##### for processing image debug output
@@ -612,8 +640,8 @@ from IPython.display import HTML
 
 
 project_video_output = 'output_videos/project_video_output.mp4'
-clip1 = VideoFileClip('project_video.mp4')
-#clip1 = VideoFileClip('test_video.mp4')
+#clip1 = VideoFileClip('project_video.mp4')
+clip1 = VideoFileClip('test_video.mp4')
 
 project_video_clip = clip1.fl_image(process_image) #NOTE: this function expects color images!!
 project_video_clip.write_videofile(project_video_output, audio=False)
