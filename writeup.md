@@ -70,6 +70,11 @@ hog_feat = True             # HOG features on or off
 
 ```
 
+* I tried different Color Space setting like `HSV`, `HLS`, `YUV` and `YCrCb` but after several try `YCrCb` gives me most accurate detect on the car image. 
+* I didn't change setting for `orientations=9`, `pixels_per_cell=(8, 8)` and `cells_per_block=(2, 2)` which come directly from Udacity course. I set all `spatial_feat`, `hist_feat` and `hog_feat ` to `True` which gives more image features length, but it took longer time to exact the features from all images. I didn't look at HOG feature visualizations. 
+* The final test accuracy of SVC is always great than 99% and I stop here to contine optimizing the HOG parameters.
+
+
 #### 3. Describe how (and identify where in my code) I trained a classifier using my selected HOG features (and color features if I used them).
 
 The code is in code cell [3]. I trained a linear SVM using sklearn.svm (LinearSVC). First need to extract
@@ -91,7 +96,13 @@ Test Accuracy of SVC =  0.9919
 
 The code is in code cell [4] find_cars function, a single function that can extract features using hog sub-sampling and make predictions.
 
-I chose 64 as the orginal sampling rate, with 8 cells and 8 pix per cell. I set cells_per_step to 2 which means (8-2)/8 = 75% overlap. Multi-Scale windows (scales x 64) searching was used as below:
+I chose 64 as the orginal sampling rate, with 8 cells and 8 pix per cell. I set cells_per_step to 2 which means (8-2)/8 = 75% overlap. The same overlap value 75% was set for all the scales. 
+
+Multi-Scale windows (scales x 64) searching:
+
+From experience, the car appears bigger at the edge of the picture, and looks smaller in the middle of the picture. So I apply the largest scale 2.25x64 (which means 144x144 window)  to the edge of the picture where x>=960. Apply second largest scale 2.0x64 (which means 128x128 window) to x>=880 area...  The smallest window scale is 1.0x64 (which means 64x64 window). Total 5 scales of window are used. I tried with scale = 0.5, 0.75, 0.8 (smaller than 1.0) but it turns out that lots of false detection shows in the picture. 
+
+All the setting was used as below:
 
 ```
 # Multi-Scale prediction and window size settings
@@ -101,6 +112,8 @@ xstarts = [448, 480, 512, 880, 960]
 xstops  = [1280,1280,1280,1280,1280]
 scales  = [1.0, 1.25,1.5, 2.0, 2.25]
 ```
+
+
 
 
 #### 2. Show some examples of test images to demonstrate how my pipeline is working.  What did I do to optimize the performance of my classifier?
