@@ -10,7 +10,7 @@ The goals / steps of this project are the following:
 * Estimate a bounding box for vehicles detected.
 
 [//]: # (Image References)
-[image1]: ./examples/data augement.png
+[image1]: ./examples/data_augement.png
 [image2]: ./examples/hog_example.png
 [image3]: ./examples/sliding_windows.png
 [image5]: ./examples/images_and_heat.png
@@ -93,15 +93,14 @@ The code is in code cell [4] find_cars function, a single function that can extr
 
 I chose 64 as the orginal sampling rate, with 8 cells and 8 pix per cell. I set cells_per_step to 2 which means (8-2)/8 = 75% overlap. Multi-Scale windows (scales x 64) searching was used as below:
 
-'''
+```
 # Multi-Scale prediction and window size settings
 ystarts = [360, 360, 360, 360, 360]
 ystops  = [560, 600, 660, 660, 660]
 xstarts = [448, 480, 512, 880, 960]
 xstops  = [1280,1280,1280,1280,1280]
 scales  = [1.0, 1.25,1.5, 2.0, 2.25]
-
-'''
+```
 
 
 #### 2. Show some examples of test images to demonstrate how my pipeline is working.  What did I do to optimize the performance of my classifier?
@@ -109,6 +108,7 @@ scales  = [1.0, 1.25,1.5, 2.0, 2.25]
 Ultimately I applied 5 scales using YCrCb 3-channel HOG features plus spatially binned color and histograms of color in the feature vector, which provided a nice result.  Here are some example images:
 
 ![alt text][image3]
+
 ---
 
 ### Video Implementation
