@@ -132,8 +132,16 @@ Here's an example result showing the heatmap from a series of frames of video, t
 
 ![alt text][image6]
 
-#### 3. Describe how I implemented vehicles class for object tracking.
 
+---
+
+### Discussion
+
+#### 1. Briefly discuss any problems / issues I faced in my implementation of this project.  Where will my pipeline likely fail?  What could I do to make it more robust?
+
+Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
+
+I will describe how I implemented vehicles class for object tracking.
 The code is in code cell [8], class vehicles(). I set this class parameters as follows:
 
 ```
@@ -165,14 +173,8 @@ If find LESS cars in the frame, I will still keep the missed box in current fram
 
 After this I will do `average()` to get a smooth box location. To plot those boxes on the frame, I only choose those boxes which has frequncy more than 2. This could help to reduce the false detection on the video. 
 
-
----
-
-### Discussion
-
-#### 1. Briefly discuss any problems / issues I faced in my implementation of this project.  Where will my pipeline likely fail?  What could I do to make it more robust?
-
-Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
-
+The final video result looks pretty good and stable, always tracking the main car objects in the video and never lost. 
+Only 1 false detection in the frame when the car pass by the traffic sign (video 00:19). I could optimise the heatmap threshold setting and the setting of car_freq for plotting to get a better result.
+Also the pipeline has difficulty to detect cars on the edge of the picture. I might need to optimise setting of multi-scale for window searching around the edge area.
 
 
